@@ -1,27 +1,41 @@
 <script setup>
-import { ref, onMounted, computed, watch, onUpdated } from "vue";
-import { useWindowSize } from "@vueuse/core";
-const { width, height } = useWindowSize();
+import { useSwipe, useWindowSize } from "@vueuse/core";
+import { onMounted, onUpdated, ref, watch } from "vue";
 
-const { itemsToShow, buttons, navigation, breakpoints, autoPlay, gap } = defineProps(
-  ["items-to-show", "buttons", "navigation", "breakpoints", "autoPlay","gap"]
-);
+const { width } = useWindowSize();
+
+const { itemsToShow, buttons, navigation, breakpoints, autoPlay, gap, color } =
+  defineProps([
+    "items-to-show",
+    "buttons",
+    "navigation",
+    "breakpoints",
+    "autoPlay",
+    "gap",
+    "color",
+  ]);
 
 let count = defineModel();
-
-
 const el = ref(null);
+const infinite = ref(true)
+
+const { isSwiping, direction } = useSwipe(el);
+
 const innerWidth = ref("w-0");
 const itemToShow = ref(itemsToShow);
 const finalWidth = ref(0);
-const gapProp = ref(gap?gap:"10");
+const gapProp = ref(gap ? gap : "10");
 const gapClass = ref(`gap: ${gapProp.value}px`);
 const moveTranslate = ref("transform:translateX(0px)");
 const translation = ref("");
 const slideElements = ref("");
+const duration = ref("duration-200");
+let check = false;
 
 if (count.value == undefined) {
   count = ref(0);
+} else {
+  check = true;
 }
 
 function searchBreakpoints(keys) {
@@ -32,7 +46,6 @@ function searchBreakpoints(keys) {
     }
   }
   return keys[pos];
-  
 }
 function checkBreakpoint() {
   let keys = [];
@@ -43,40 +56,32 @@ function checkBreakpoint() {
   }
 
   let actualPosition = searchBreakpoints(keys);
-  itemToShow.value = breakpoints[actualPosition]; 
-  
-  
+  itemToShow.value = breakpoints[actualPosition];
 }
 checkBreakpoint();
-
-watch(width,()=>{
-  checkBreakpoint();
-  console.log(itemToShow.value);
-})
 
 function moveSlider(direction) {
   if (direction == "right") {
     if (count.value != -(slideElements.value - itemToShow.value)) {
       count.value = count.value - 1;
-    } else {
-      count.value = 0;
-    }
+    } 
   } else {
     console.log("left");
 
     if (count.value != 0) {
       count.value = count.value + 1;
-    } else {
-      count.value = -(slideElements.value - itemToShow.value);
-    }
+    } 
   }
 
-  translation.value = (innerWidth.value + parseInt(gapProp.value)) * count.value;
+  translation.value =
+    (innerWidth.value + parseInt(gapProp.value)) * count.value;
   moveTranslate.value = "transform:translateX(" + translation.value + "px)";
+  moveItemToPosition(direction)
 }
 function goTo(pos) {
   count.value = -pos;
-  translation.value = (innerWidth.value + parseInt(gapProp.value)) * count.value;
+  translation.value =
+    (innerWidth.value + parseInt(gapProp.value)) * count.value;
   moveTranslate.value = "transform:translateX(" + translation.value + "px)";
 }
 
@@ -86,27 +91,75 @@ function autoplay() {
   }, autoPlay);
 }
 
+function moveItemToPosition(direction) {
+  console.log(typeof el.value.children);
+  if (direction =="left") {
+
+    const children = el.value.children[0]
+    el.value.children.splice(0,1)
+    el.value.children.push(children)
+    
+  }else{
+    const children = el.value.children[el.value.children.length - 1]
+    el.value.children.removeChild(children)
+    el.value.children.appendChild(children)
+  }
+
+}
+
 if (autoPlay) {
   autoplay();
 }
+watch(isSwiping, () => {
+  if (isSwiping) {
+    if (direction.value == "right") {
+      moveSlider("left");
+    } else {
+      moveSlider("right");
+    }
+  }
+});
+
+watch(count, () => {
+  if (check) {
+    translation.value =
+      (innerWidth.value + parseInt(gapProp.value)) * -count.value;
+  } else {
+    translation.value =
+      (innerWidth.value + parseInt(gapProp.value)) * count.value;
+  }
+  moveTranslate.value = "transform:translateX(" + translation.value + "px)";
+});
+watch(width, () => {
+  checkBreakpoint();
+  console.log(itemToShow.value);
+});
 
 onMounted(() => {
   slideElements.value = el.value.childElementCount;
   innerWidth.value = el.value.children[0].offsetWidth;
-  finalWidth.value = innerWidth.value * itemToShow.value + gapProp.value * (itemToShow.value - 1);
+  finalWidth.value =
+    innerWidth.value * itemToShow.value +
+    gapProp.value * (itemToShow.value - 1);
 });
 
-onUpdated(()=>{
+onUpdated(() => {
   slideElements.value = el.value.childElementCount;
   innerWidth.value = el.value.children[0].offsetWidth;
-  finalWidth.value = innerWidth.value * itemToShow.value + gapProp.value * (itemToShow.value - 1);
-})
+  finalWidth.value =
+    innerWidth.value * itemToShow.value +
+    gapProp.value * (itemToShow.value - 1);
+});
 </script>
 
 <template>
   <section class="flex flex-col items-center">
     <div class="flex items-center gap-4">
-      <button v-if="buttons" class="block w-10 p-2" @click="moveSlider('left')">
+      <button
+        v-if="buttons"
+        class="block w-10 p-2 translate-x-14 relative z-[1]"
+        @click="moveSlider('left')"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 512 512"
@@ -118,18 +171,23 @@ onUpdated(()=>{
         </svg>
       </button>
 
-      <section :style="`width: ${finalWidth}px`" class="overflow-x-hidden">
+      <section
+        @touchmove="console.log('moved')"
+        :style="`width: ${finalWidth}px`"
+        class="overflow-x-hidden"
+      >
         <div
           ref="el"
           :style="[gapClass, moveTranslate]"
-          class="flex justify-start w-fit duration-200 ease-in-out"
+          :class="duration"
+          class="flex justify-start w-fit  ease-in-out relative"
         >
           <slot></slot>
         </div>
       </section>
       <button
         v-if="buttons"
-        class="block p-2 w-10"
+        class="block p-2 w-10 -translate-x-14 relative z-[1]"
         @click="moveSlider('right')"
       >
         <svg
