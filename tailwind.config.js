@@ -14,7 +14,22 @@ export default {
         'secondary': '#c0a3c6',
         'accent': '#b181a4',
        },
-       
+       animation:{
+          openFlip:'openDoor 0.3s ease-in-out',
+          closeFlip:'closeDoor 0.3s ease-in-out',
+       },
+       keyframes:{
+        openDoor: {
+          '0%': { transform: 'rotateY(0deg)' },
+          '50%': { 'z-index': '0' },
+          '100%': { transform: 'rotateY(-180deg)' },
+        },
+        closeDoor: {
+          '0%': { transform: 'rotateY(-180deg)' },
+          '50%': { 'z-index': '99' },
+          '100%': { transform: 'rotateY(0deg)' },
+        }
+       }
     },
   },
   plugins: [],

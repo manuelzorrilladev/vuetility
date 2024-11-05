@@ -1,7 +1,7 @@
 {
   "name": "vue-ui-lib",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,8 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vueuse/core": "^10.11.1",
-    "vue": "^3.4.21"
+    "@vueuse/core": "^11.1.0",
+    "gsap": "^3.12.5",
+    "vue": "^3.5.12"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",

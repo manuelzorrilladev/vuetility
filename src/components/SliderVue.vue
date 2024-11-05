@@ -1,25 +1,32 @@
 <script setup>
 import { useSwipe, useWindowSize } from "@vueuse/core";
-import { onMounted, onUpdated, ref, watch } from "vue";
+import { onMounted, onUpdated, ref, watch, useTemplateRef } from "vue";
+
+const {
+  itemsToShow,
+  buttons,
+  navigation,
+  breakpoints,
+  autoPlay,
+  gap,
+  animationType,
+  stagger
+} = defineProps([
+  "items-to-show",
+  "buttons",
+  "navigation",
+  "breakpoints",
+  "auto-play",
+  "gap",
+  "animation-type",
+  "stagger"
+]);
 
 const { width } = useWindowSize();
+let counter = defineModel();
+const element = useTemplateRef("element");
 
-const { itemsToShow, buttons, navigation, breakpoints, autoPlay, gap, color } =
-  defineProps([
-    "items-to-show",
-    "buttons",
-    "navigation",
-    "breakpoints",
-    "autoPlay",
-    "gap",
-    "color",
-  ]);
-
-let count = defineModel();
-const el = ref(null);
-const infinite = ref(true)
-
-const { isSwiping, direction } = useSwipe(el);
+const { isSwiping, direction } = useSwipe(element);
 
 const innerWidth = ref("w-0");
 const itemToShow = ref(itemsToShow);
@@ -28,15 +35,23 @@ const gapProp = ref(gap ? gap : "10");
 const gapClass = ref(`gap: ${gapProp.value}px`);
 const moveTranslate = ref("transform:translateX(0px)");
 const translation = ref("");
-const slideElements = ref("");
+const slideElements = ref(0);
 const duration = ref("duration-200");
-let check = false;
+const animationName = ref(animationType)
 
-if (count.value == undefined) {
-  count = ref(0);
-} else {
-  check = true;
+const animation = ref({
+  translateUp: ["translate-up-off", "translate-up-on"],
+  translateDown: ["translate-down-off", "translate-down-on"],
+  scale: ["scale-off", "scale-on"],
+  rotate:["circle-off", "circle-on"],
+  none: ["none", "none"],
+});
+if (animationType == undefined) {
+  animationName.value = "none";
 }
+
+const correction = animation.value[animationName.value][0];
+
 
 function searchBreakpoints(keys) {
   let pos = 0;
@@ -58,58 +73,98 @@ function checkBreakpoint() {
   let actualPosition = searchBreakpoints(keys);
   itemToShow.value = breakpoints[actualPosition];
 }
-checkBreakpoint();
-
 function moveSlider(direction) {
   if (direction == "right") {
-    if (count.value != -(slideElements.value - itemToShow.value)) {
-      count.value = count.value - 1;
-    } 
+    if (counter.value < slideElements.value - itemToShow.value) {
+      counter.value++;
+      goToAnimate(1);
+    } else {
+      counter.value = 0;
+      goToAnimate(1);
+    }
   } else {
-    console.log("left");
-
-    if (count.value != 0) {
-      count.value = count.value + 1;
-    } 
+    if (counter.value != 0) {
+      counter.value--;
+      goToAnimate(2);
+    } else {
+      counter.value = slideElements.value - itemToShow.value;
+      goToAnimate(2);
+    }
   }
 
   translation.value =
-    (innerWidth.value + parseInt(gapProp.value)) * count.value;
+    (innerWidth.value + parseInt(gapProp.value)) * counter.value;
   moveTranslate.value = "transform:translateX(" + translation.value + "px)";
-  moveItemToPosition(direction)
+}
+function moveAnimation(miliseconds) {
+  let count = 0;
+  const interval = setInterval(() => {
+    if (count < itemToShow.value) {
+      element.value.children[count].classList.add(
+        animation.value[animationName.value][1]
+      );
+      element.value.children[count].classList.remove(
+        animation.value[animationName.value][0]
+      );
+      count++;
+    } else {
+      count = 0;
+      clearInterval(interval);
+    }
+  }, miliseconds);
 }
 function goTo(pos) {
-  count.value = -pos;
+  counter.value = pos;
   translation.value =
-    (innerWidth.value + parseInt(gapProp.value)) * count.value;
+    (innerWidth.value + parseInt(gapProp.value)) * counter.value;
   moveTranslate.value = "transform:translateX(" + translation.value + "px)";
+  goToAnimate(4);
 }
+function goToAnimate(pos) {
+  let index = 0;
 
+  const goToInterval = setInterval(() => {
+    if (index >= counter.value && index < itemToShow.value + counter.value) {
+      element.value.children[index].classList.remove(
+        animation.value[animationName.value][0]
+      );
+      element.value.children[index].classList.add(
+        animation.value[animationName.value][1]
+      );
+    } else {
+      element.value.children[index].classList.remove(
+        animation.value[animationName.value][1]
+      );
+      element.value.children[index].classList.add(
+        animation.value[animationName.value][0]
+      );
+    }
+
+    index++;
+
+    if (index == slideElements.value) {
+      clearInterval(goToInterval);
+    }
+  }, 25);
+}
 function autoplay() {
   setInterval(() => {
     moveSlider("right");
   }, autoPlay);
 }
 
-function moveItemToPosition(direction) {
-  console.log(typeof el.value.children);
-  if (direction =="left") {
-
-    const children = el.value.children[0]
-    el.value.children.splice(0,1)
-    el.value.children.push(children)
-    
-  }else{
-    const children = el.value.children[el.value.children.length - 1]
-    el.value.children.removeChild(children)
-    el.value.children.appendChild(children)
-  }
-
+if (counter.value == undefined) {
+  counter = ref(0);
 }
+if (itemToShow.value == undefined) {
+  checkBreakpoint();
+}
+
 
 if (autoPlay) {
   autoplay();
 }
+
 watch(isSwiping, () => {
   if (isSwiping) {
     if (direction.value == "right") {
@@ -120,32 +175,32 @@ watch(isSwiping, () => {
   }
 });
 
-watch(count, () => {
-  if (check) {
-    translation.value =
-      (innerWidth.value + parseInt(gapProp.value)) * -count.value;
-  } else {
-    translation.value =
-      (innerWidth.value + parseInt(gapProp.value)) * count.value;
-  }
+watch(counter, () => {
+  translation.value =
+    (innerWidth.value + parseInt(gapProp.value)) * -counter.value;
   moveTranslate.value = "transform:translateX(" + translation.value + "px)";
 });
+
 watch(width, () => {
   checkBreakpoint();
-  console.log(itemToShow.value);
 });
 
 onMounted(() => {
-  slideElements.value = el.value.childElementCount;
-  innerWidth.value = el.value.children[0].offsetWidth;
+  slideElements.value = element.value.childElementCount;
+  innerWidth.value = element.value.children[0].offsetWidth;
+
   finalWidth.value =
     innerWidth.value * itemToShow.value +
     gapProp.value * (itemToShow.value - 1);
+  for (let index = 0; index < element.value.children.length; index++) {
+    element.value.children[index].classList.add(correction);
+  }
+  moveAnimation(stagger?stagger:100);
 });
 
 onUpdated(() => {
-  slideElements.value = el.value.childElementCount;
-  innerWidth.value = el.value.children[0].offsetWidth;
+  slideElements.value = element.value.childElementCount;
+  innerWidth.value = element.value.children[0].offsetWidth;
   finalWidth.value =
     innerWidth.value * itemToShow.value +
     gapProp.value * (itemToShow.value - 1);
@@ -153,7 +208,7 @@ onUpdated(() => {
 </script>
 
 <template>
-  <section class="flex flex-col items-center">
+  <section class="flex flex-col justify-center items-center">
     <div class="flex items-center gap-4">
       <button
         v-if="buttons"
@@ -172,19 +227,19 @@ onUpdated(() => {
       </button>
 
       <section
-        @touchmove="console.log('moved')"
         :style="`width: ${finalWidth}px`"
-        class="overflow-x-hidden"
+        class="h-fit py-10 overflow-hidden"
       >
         <div
-          ref="el"
+          ref="element"
           :style="[gapClass, moveTranslate]"
           :class="duration"
-          class="flex justify-start w-fit  ease-in-out relative"
+          class="flex justify-start w-fit ease-in-out relative"
         >
           <slot></slot>
         </div>
       </section>
+
       <button
         v-if="buttons"
         class="block p-2 w-10 -translate-x-14 relative z-[1]"
@@ -201,6 +256,7 @@ onUpdated(() => {
         </svg>
       </button>
     </div>
+
     <div
       id="rounded"
       v-if="slideElements != 0 && navigation == 'rounded'"
@@ -208,7 +264,7 @@ onUpdated(() => {
     >
       <div v-for="items in slideElements - itemToShow + 1" :key="items">
         <button
-          :class="[count == -items + 1 ? 'bg-gray-600' : 'bg-gray-400']"
+          :class="[counter == -items + 1 ? 'bg-gray-600' : 'bg-gray-400']"
           class="border w-4 h-4 rounded-full hover:bg-gray-600 duration-200"
           @click="goTo(items - 1)"
         ></button>
@@ -221,7 +277,7 @@ onUpdated(() => {
     >
       <div v-for="items in slideElements - itemToShow + 1" :key="items">
         <button
-          :class="[count == -items + 1 ? 'bg-gray-600' : 'bg-gray-400']"
+          :class="[counter == -items + 1 ? 'bg-gray-600' : 'bg-gray-400']"
           class="border w-4 h-2 hover:bg-gray-600 duration-200"
           @click="goTo(items - 1)"
         ></button>
@@ -234,7 +290,7 @@ onUpdated(() => {
     >
       <div v-for="items in slideElements - itemToShow + 1" :key="items">
         <button
-          :class="[count == -items + 1 ? 'bg-gray-600' : 'bg-gray-400']"
+          :class="[counter == -items + 1 ? 'bg-gray-600' : 'bg-gray-400']"
           class="border w-3 h-3 hover:bg-gray-600 duration-200"
           @click="goTo(items - 1)"
         ></button>
@@ -247,7 +303,7 @@ onUpdated(() => {
     >
       <div v-for="items in slideElements - itemToShow + 1" :key="items">
         <button
-          :class="[count == -items + 1 ? 'bg-gray-600' : 'bg-transparent']"
+          :class="[counter == -items + 1 ? 'bg-gray-600' : 'bg-transparent']"
           class="border border-gray-700 w-4 h-4 rounded-full hover:bg-gray-600 duration-200"
           @click="goTo(items - 1)"
         ></button>
@@ -260,7 +316,7 @@ onUpdated(() => {
     >
       <div v-for="items in slideElements - itemToShow + 1" :key="items">
         <button
-          :class="[count == -items + 1 ? 'bg-gray-600' : 'bg-transparent']"
+          :class="[counter == -items + 1 ? 'bg-gray-600' : 'bg-transparent']"
           class="border border-gray-700 w-4 h-2 hover:bg-gray-600 duration-200"
           @click="goTo(items - 1)"
         ></button>
@@ -273,7 +329,7 @@ onUpdated(() => {
     >
       <div v-for="items in slideElements - itemToShow + 1" :key="items">
         <button
-          :class="[count == -items + 1 ? 'bg-gray-600' : 'bg-transparent']"
+          :class="[counter == -items + 1 ? 'bg-gray-600' : 'bg-transparent']"
           class="border border-gray-700 w-3 h-3 hover:bg-gray-600 duration-200"
           @click="goTo(items - 1)"
         ></button>
@@ -283,3 +339,97 @@ onUpdated(() => {
 </template>
 
 
+<style scoped>
+:slotted(.translate-up-off) {
+  transform: translateY(120%);
+  opacity: 0;
+}
+
+:slotted(.translate-up-on) {
+  animation: showUp 0.7s ease-in-out;
+}
+
+:slotted(.translate-down-off) {
+  transform: translateY(-120%);
+  opacity: 0;
+}
+:slotted(.translate-down-on) {
+  animation: showDown 0.7s ease-in-out;
+}
+
+:slotted(.scale-off) {
+  transform: scale(0);
+  opacity: 0;
+}
+:slotted(.scale-on) {
+  animation: scale 0.3s ease-in-out;
+}
+:slotted(.circle-off) {
+  transform: rotate(360deg) scale(0);
+
+  opacity: 0;
+}
+:slotted(.circle-on) {
+  animation: rotate 0.3s ease-in-out;
+}
+
+@keyframes showUp {
+  0% {
+    transform: translateY(2000%);
+    opacity: 0;
+  }
+  70% {
+    transform: translateY(-20%);
+  }
+  90% {
+    transform: translateY(5%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0%);
+  }
+}
+
+@keyframes showDown {
+  0% {
+    transform: translateY(-2000%);
+    opacity: 0;
+  }
+  70% {
+    transform: translateY(20%);
+  }
+  90% {
+    transform: translateY(-5%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0%);
+  }
+}
+
+@keyframes scale {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  70% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(360deg) scale(0);
+    opacity: 0;
+  }
+
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+</style>
