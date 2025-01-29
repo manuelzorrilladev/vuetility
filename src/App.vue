@@ -1,54 +1,210 @@
 <script setup>
-import { onMounted, ref, useTemplateRef, watch} from "vue";
-import SliderVue from "./components/SliderVue.vue";
+import { computed, onMounted, ref, useTemplateRef, watch } from "vue";
 
-const item = useTemplateRef("item")
-const itemRef = ref()
-const breakpoints = { 
+const item = useTemplateRef("item");
+const itemRef = ref();
+const country = ref("");
+const region = ref("");
+const breakpoints = {
   720: 5,
   480: 1,
 };
 const counter = ref(0);
 const total = 10;
+const active = ref(false);
 
-
-onMounted(()=>{
-  itemRef.value = item.value
- 
-})
+onMounted(() => {
+  itemRef.value = item.value;
+});
+const rotation = computed(() => {
+  return active.value ? "rotation" : "";
+});
 </script>
 
 <template>
   <main class="duration-200 bg-background">
-    <section>
-      <div
-        class="w-full flex items-center justify-center border border-black h-screen gap-4"
-      >
- 
-      <SliderVue
-      :breakpoints="breakpoints"
-      v-model="counter"
-      navigation="border-rounded"
-      :buttons="true"
-      animationType="scale"
-      :stagger="200"
-         
-        >
-          <div
-            v-for="i in 10"
-            :key="i"
-            class="duration-200 h-[300px] w-[200px] bg-gradient-to-b from-green-700 to-green-500 border-2 border-green-950 flex items-center justify-center rounded-lg "
-          >
-            {{ i }} Hola
+    <button @click="active = !active">{{ active }}</button>
+    <section class="body">
+      <input type="checkbox" id="checkbox-cover" />
+      <input type="checkbox" id="checkbox-page1" />
+      <input type="checkbox" id="checkbox-page2" />
+      <input type="checkbox" id="checkbox-page3" />
+      <div class="book">
+        <div class="cover">
+          <label for="checkbox-cover"></label>
+        </div>
+        <div class="page" id="page1">
+          <div class="front-page">
+            <p>
+              Lorem ipsum dolor sit amet consectetur, adipisicing elit. Nihil
+              magni laudantium beatae quia. Recusandae, fuga quas consectetur
+              perferendis aperiam esse velit veniam ducimus? Quisquam
+              consequatur perferendis quidem quia, recusandae ab!
+            </p>
+            <label class="next" for="checkbox-page1"
+              ><i class="fas fa-chevron-right"></i
+            ></label>
           </div>
-        </SliderVue>
-       
-       
+          <div class="back-page">
+            <img src="1.jpg" />
+            <label class="prev" for="checkbox-page1"
+              ><i class="fas fa-chevron-left"></i
+            ></label>
+          </div>
+        </div>
+        <div class="page" id="page2">
+          <div class="front-page">
+            <h2>Page 2</h2>
+            <p>
+              Lorem ipsum dolor sit amet consectetur, adipisicing elit. Nihil
+              magni laudantium beatae quia. Recusandae, fuga quas consectetur
+              perferendis aperiam esse velit veniam ducimus? Quisquam
+              consequatur perferendis quidem quia, recusandae ab!
+            </p>
+            <label class="next" for="checkbox-page2"
+              ><i class="fas fa-chevron-right"></i
+            ></label>
+          </div>
+          <div class="back-page">
+            <img src="2.jpg" />
+            <label class="prev" for="checkbox-page2"
+              ><i class="fas fa-chevron-left"></i
+            ></label>
+          </div>
+        </div>
+        <div class="page" id="page3">
+          <div class="front-page">
+            <h2>Page 3</h2>
+            <p>
+              Lorem ipsum dolor sit amet consectetur, adipisicing elit. Nihil
+              magni laudantium beatae quia. Recusandae, fuga quas consectetur
+              perferendis aperiam esse velit veniam ducimus? Quisquam
+              consequatur perferendis quidem quia, recusandae ab!
+            </p>
+          </div>
+        </div>
+        <div class="back-cover"></div>
       </div>
     </section>
   </main>
 </template>
 
 <style scoped>
+.body {
+	font-family: "Poppin", sans-serif;
+	background-color: #2e3537;
+	height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.book {
+	width: 350px;
+	height: 450px;
+	position: relative;
+	transition-duration: 1s;
+	perspective: 1500;
+}
+input {
+	display: none;
+}
+.cover, .back-cover {
+	background-color: #4173a5;
+	width: 100%;
+	height: 100%;
+	border-radius: 0 15px 15px 0;
+	box-shadow: 0 0 5px rgb(41, 41, 41);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transform-origin: center left;
+}
+.cover {
+	position: absolute;
+	z-index: 4;
+	transition: transform 1s;
+}
+.cover label {
+	width: 100%;
+	height: 100%;
+	cursor: pointer;
+}
+.back-cover {
+	position: relative;
+	z-index: -1;
+}
+.page {
+	position: absolute;
+	background-color: white;
+	width: 330px;
+	height: 430px;
+	border-radius: 0 15px 15px 0;
+	margin-top: 10px;
+	transform-origin: left;
+	transform-style: preserve-3d;
+	transform: rotateY(0deg);
+	transition-duration: 1.5s;
+}
+.page img {
+	width: 100%;
+	height: 100%;
+	border-radius: 15px 0 0 15px;
+}
+.front-page {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	backface-visibility: hidden;
+	box-sizing: border-box;
+	padding: 1rem;
+}
+.back-page {
+	transform: rotateY(180deg);
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	backface-visibility: hidden;
+	z-index: 99;
+}
+.next, .prev {
+	position: absolute;
+	bottom: 1em;
+	cursor: pointer;
+}
+.next {
+	right: 1em;
+}
+.prev {
+	left: 1em;
+}
+#page1 {
+	z-index: 3;
+}
+#page2 {
+	z-index: 2;
+}
+#page3 {
+	z-index: 1;
+}
+#checkbox-cover:checked ~ .book {
+	transform: translateX(200px);
+}
+#checkbox-cover:checked ~ .book .cover {
+	transition: transform 1.5s, z-index 0.5s 0.5s;
+	transform: rotateY(-180deg);
+	z-index: 1;
+}
+#checkbox-cover:checked ~ .book .page {
+	box-shadow: 0 0 3px rgb(99, 98, 98);
+}
+#checkbox-page1:checked ~ .book #page1 {
+	transform: rotateY(-180deg);
+	z-index: 2;
+}
+#checkbox-page2:checked ~ .book #page2 {
+	transform: rotateY(-180deg);
+	z-index: 3;
+}
+
 
 </style>
