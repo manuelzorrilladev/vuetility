@@ -66,7 +66,7 @@ onMounted(() => {
     <!-- <h2
       ref="item"
       :class="animate"
-      class="border-2 border-green-950 px-10 py-4 overflow-hidden bg-gradient-to-b from-green-700 to-green-400 backdrop-filter backdrop-blur-sm bg-opacity-70 flex items-center justify-center rounded-xl duration-200 text-2xl font-black"
+      class="border-2 border-green-950 px-10 py-4 overflow-hidden bg-linear-to-b from-green-700 to-green-400 backdrop-filter backdrop-blur-xs bg-opacity-70 flex items-center justify-center rounded-xl duration-200 text-2xl font-black"
     >
       Texto de prueba
     </h2> -->
@@ -74,7 +74,7 @@ onMounted(() => {
  
       ref="item"
       :class="animate"
-      class="border-2 border-green-950 px-10 py-4 overflow-hidden bg-gradient-to-b from-green-700 to-green-400 backdrop-filter backdrop-blur-sm bg-opacity-70 flex items-center justify-center rounded-xl duration-200 text-2xl font-black"
+      class="border-2 border-green-950 px-10 py-4 overflow-hidden bg-linear-to-b from-green-700 to-green-400 backdrop-filter backdrop-blur-xs bg-opacity-70 flex items-center justify-center rounded-xl duration-200 text-2xl font-black"
     >
       Texto de prueba
     </div>

@@ -1,6 +1,7 @@
 <script setup>
 import { useSwipe, useWindowSize } from "@vueuse/core";
-import { onMounted, onUpdated, ref, watch, useTemplateRef } from "vue";
+import { computed, onMounted, onUpdated, ref, useTemplateRef, watch } from "vue";
+import NavigationButtons from "./NavigationButtons.vue";
 
 const {
   itemsToShow,
@@ -10,7 +11,10 @@ const {
   autoPlay,
   gap,
   animationType,
-  stagger
+  stagger,
+  mainColor,
+  accentColor,
+  infinite
 } = defineProps([
   "items-to-show",
   "buttons",
@@ -19,14 +23,48 @@ const {
   "auto-play",
   "gap",
   "animation-type",
-  "stagger"
+  "stagger",
+  "main-color",
+  "accent-color",
+ "infinite"
 ]);
-
+// GLOBAL VARIABLES
 const { width } = useWindowSize();
-let counter = defineModel();
 const element = useTemplateRef("element");
-
 const { isSwiping, direction } = useSwipe(element);
+let counter = defineModel();
+const updated = ref(true)
+const infinity = computed(()=>{
+  return infinite == undefined ? false : infinite
+})
+
+// COLOR MODULE
+
+
+function isValidHexaCode(str, type) {
+  const regex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+  const defaultColors = {
+    main: "#2c2c2c",
+    accent: "#c9c9c9",
+  };
+
+  if (str == null || !regex.test(str)) {
+    return defaultColors[type] || null;
+  }
+
+  return str;
+}
+
+let colors = {
+  main: `background-color:${isValidHexaCode(mainColor, "main")}`,
+  rounded: `border-color:${isValidHexaCode(mainColor, "main")}`,
+  mainAccent: `background-color:${isValidHexaCode(accentColor, "accent")}`,
+  fill:`fill:${isValidHexaCode(mainColor, "main")}`
+};
+
+
+
+// PROPS HANDLING
 
 const innerWidth = ref("w-0");
 const itemToShow = ref(itemsToShow);
@@ -37,23 +75,10 @@ const moveTranslate = ref("transform:translateX(0px)");
 const translation = ref("");
 const slideElements = ref(0);
 const duration = ref("duration-200");
-const animationName = ref(animationType)
-
-const animation = ref({
-  translateUp: ["translate-up-off", "translate-up-on"],
-  translateDown: ["translate-down-off", "translate-down-on"],
-  scale: ["scale-off", "scale-on"],
-  rotate:["circle-off", "circle-on"],
-  none: ["none", "none"],
-});
-if (animationType == undefined) {
-  animationName.value = "none";
-}
-
-const correction = animation.value[animationName.value][0];
 
 
-function searchBreakpoints(keys) {
+// BREAKPOINTS MODULE
+function searchBreakpoints(keys){
   let pos = 0;
   for (let index = 0; index < keys.length; index++) {
     if (keys[index] <= width.value) {
@@ -69,33 +94,12 @@ function checkBreakpoint() {
     keys.push(parseInt(key));
     values.push(parseInt(value));
   }
-
   let actualPosition = searchBreakpoints(keys);
   itemToShow.value = breakpoints[actualPosition];
 }
-function moveSlider(direction) {
-  if (direction == "right") {
-    if (counter.value < slideElements.value - itemToShow.value) {
-      counter.value++;
-      goToAnimate(1);
-    } else {
-      counter.value = 0;
-      goToAnimate(1);
-    }
-  } else {
-    if (counter.value != 0) {
-      counter.value--;
-      goToAnimate(2);
-    } else {
-      counter.value = slideElements.value - itemToShow.value;
-      goToAnimate(2);
-    }
-  }
 
-  translation.value =
-    (innerWidth.value + parseInt(gapProp.value)) * counter.value;
-  moveTranslate.value = "transform:translateX(" + translation.value + "px)";
-}
+// SLIDER MOVE MODULE
+// --moveAnimation(int){ animate slider enter when component is mounted }
 function moveAnimation(miliseconds) {
   let count = 0;
   const interval = setInterval(() => {
@@ -113,14 +117,8 @@ function moveAnimation(miliseconds) {
     }
   }, miliseconds);
 }
-function goTo(pos) {
-  counter.value = pos;
-  translation.value =
-    (innerWidth.value + parseInt(gapProp.value)) * counter.value;
-  moveTranslate.value = "transform:translateX(" + translation.value + "px)";
-  goToAnimate(4);
-}
-function goToAnimate(pos) {
+// --goToAnimate{ handler for animate each item, if the item is visible or not visible}
+function goToAnimate() {
   let index = 0;
 
   const goToInterval = setInterval(() => {
@@ -147,6 +145,49 @@ function goToAnimate(pos) {
     }
   }, 25);
 }
+// -- moveSlider(string){ move to the desired side  }
+function moveSlider(side) {
+  let aux = false
+  if (side == "right") {
+    if (counter.value < slideElements.value - itemToShow.value) {
+      counter.value++;
+      goToAnimate();
+      aux=true
+    } 
+    else {
+      // counter.value = 0;
+      // goToAnimate();
+      aux=false
+    }
+  } else {
+    if (counter.value != 0) {
+      counter.value--;
+      goToAnimate();
+      aux=true
+    }
+     else {
+      aux=false
+      // counter.value = slideElements.value - itemToShow.value;
+      // goToAnimate();
+    }
+  }
+  if(aux == true) {
+    translation.value =
+      (innerWidth.value + parseInt(gapProp.value)) * counter.value;
+    moveTranslate.value = "transform:translateX(" + translation.value + "px)";
+  }
+
+}
+// goTo(int){ navigation handler }
+function goTo(pos) {
+  counter.value = pos;
+  translation.value =
+    (innerWidth.value + parseInt(gapProp.value)) * counter.value;
+  moveTranslate.value = "transform:translateX(" + translation.value + "px)";
+  goToAnimate();
+}
+
+
 function autoplay() {
   setInterval(() => {
     moveSlider("right");
@@ -160,13 +201,14 @@ if (itemToShow.value == undefined) {
   checkBreakpoint();
 }
 
-
 if (autoPlay) {
   autoplay();
 }
 
+// WATCHERS MODULE
+
 watch(isSwiping, () => {
-  if (isSwiping) {
+  if (isSwiping.value == true) {
     if (direction.value == "right") {
       moveSlider("left");
     } else {
@@ -185,6 +227,23 @@ watch(width, () => {
   checkBreakpoint();
 });
 
+
+// ANIMATION MODULE
+const animationName = ref(animationType);
+if (animationType == undefined) {
+  animationName.value = "none";
+}
+
+const animation = ref({
+  translateUp: ["translate-up-off", "translate-up-on"],
+  translateDown: ["translate-down-off", "translate-down-on"],
+  scale: ["scale-off", "scale-on"],
+  rotate: ["circle-off", "circle-on"],
+  none: ["none", "none"],
+});
+const correction = animation.value[animationName.value][0];
+
+// Mounted module
 onMounted(() => {
   slideElements.value = element.value.childElementCount;
   innerWidth.value = element.value.children[0].offsetWidth;
@@ -195,7 +254,7 @@ onMounted(() => {
   for (let index = 0; index < element.value.children.length; index++) {
     element.value.children[index].classList.add(correction);
   }
-  moveAnimation(stagger?stagger:100);
+  moveAnimation(stagger ? stagger : 100);
 });
 
 onUpdated(() => {
@@ -204,6 +263,7 @@ onUpdated(() => {
   finalWidth.value =
     innerWidth.value * itemToShow.value +
     gapProp.value * (itemToShow.value - 1);
+    
 });
 </script>
 
@@ -212,13 +272,15 @@ onUpdated(() => {
     <div class="flex items-center gap-4">
       <button
         v-if="buttons"
-        class="block w-10 p-2 translate-x-14 relative z-[1]"
+        class="block w-10 p-2 translate-x-14 relative z-1"
         @click="moveSlider('left')"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 512 512"
-          class="w-full fill-gray-400 hover:fill-gray-600 duration-200"
+          :style="colors.fill"
+          class="w-full cursor-pointer hover:scale-125 duration-200"
+          
         >
           <path
             d="M512 256A256 256 0 1 0 0 256a256 256 0 1 0 512 0zM271 135c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-87 87 87 87c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0L167 273c-9.4-9.4-9.4-24.6 0-33.9L271 135z"
@@ -242,13 +304,14 @@ onUpdated(() => {
 
       <button
         v-if="buttons"
-        class="block p-2 w-10 -translate-x-14 relative z-[1]"
+        class="block p-2 w-10 -translate-x-14 relative z-1"
         @click="moveSlider('right')"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 512 512"
-          class="w-full fill-gray-400 hover:fill-gray-600 duration-200"
+          :style="colors.fill"
+          class="w-full cursor-pointer hover:scale-125  duration-200"
         >
           <path
             d="M0 256a256 256 0 1 0 512 0A256 256 0 1 0 0 256zM241 377c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l87-87-87-87c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0L345 239c9.4 9.4 9.4 24.6 0 33.9L241 377z"
@@ -257,84 +320,10 @@ onUpdated(() => {
       </button>
     </div>
 
-    <div
-      id="rounded"
-      v-if="slideElements != 0 && navigation == 'rounded'"
-      class="flex gap-1"
-    >
-      <div v-for="items in slideElements - itemToShow + 1" :key="items">
-        <button
-          :class="[counter == -items + 1 ? 'bg-gray-600' : 'bg-gray-400']"
-          class="border w-4 h-4 rounded-full hover:bg-gray-600 duration-200"
-          @click="goTo(items - 1)"
-        ></button>
-      </div>
-    </div>
-    <div
-      id="rectangle"
-      v-if="slideElements != 0 && navigation == 'rectangle'"
-      class="flex gap-1"
-    >
-      <div v-for="items in slideElements - itemToShow + 1" :key="items">
-        <button
-          :class="[counter == -items + 1 ? 'bg-gray-600' : 'bg-gray-400']"
-          class="border w-4 h-2 hover:bg-gray-600 duration-200"
-          @click="goTo(items - 1)"
-        ></button>
-      </div>
-    </div>
-    <div
-      id="square"
-      v-if="slideElements != 0 && navigation == 'square'"
-      class="flex gap-1"
-    >
-      <div v-for="items in slideElements - itemToShow + 1" :key="items">
-        <button
-          :class="[counter == -items + 1 ? 'bg-gray-600' : 'bg-gray-400']"
-          class="border w-3 h-3 hover:bg-gray-600 duration-200"
-          @click="goTo(items - 1)"
-        ></button>
-      </div>
-    </div>
-    <div
-      id="border-rounded"
-      v-if="slideElements != 0 && navigation == 'border-rounded'"
-      class="flex gap-1"
-    >
-      <div v-for="items in slideElements - itemToShow + 1" :key="items">
-        <button
-          :class="[counter == -items + 1 ? 'bg-gray-600' : 'bg-transparent']"
-          class="border border-gray-700 w-4 h-4 rounded-full hover:bg-gray-600 duration-200"
-          @click="goTo(items - 1)"
-        ></button>
-      </div>
-    </div>
-    <div
-      id="border-rectangle"
-      v-if="slideElements != 0 && navigation == 'border-rectangle'"
-      class="flex gap-1"
-    >
-      <div v-for="items in slideElements - itemToShow + 1" :key="items">
-        <button
-          :class="[counter == -items + 1 ? 'bg-gray-600' : 'bg-transparent']"
-          class="border border-gray-700 w-4 h-2 hover:bg-gray-600 duration-200"
-          @click="goTo(items - 1)"
-        ></button>
-      </div>
-    </div>
-    <div
-      id="border-square"
-      v-if="slideElements != 0 && navigation == 'border-square'"
-      class="flex gap-1"
-    >
-      <div v-for="items in slideElements - itemToShow + 1" :key="items">
-        <button
-          :class="[counter == -items + 1 ? 'bg-gray-600' : 'bg-transparent']"
-          class="border border-gray-700 w-3 h-3 hover:bg-gray-600 duration-200"
-          @click="goTo(items - 1)"
-        ></button>
-      </div>
-    </div>
+
+
+    <NavigationButtons v-if="navigation && slideElements !=0" :navigation="navigation" :slide-counter="slideElements - itemToShow + 1" :counter="counter" @go-to="goTo" :colors="colors"/>
+    
   </section>
 </template>
 
@@ -431,5 +420,4 @@ onUpdated(() => {
     transform: rotate(0deg) scale(1);
   }
 }
-
 </style>

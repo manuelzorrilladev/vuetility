@@ -1,5 +1,14 @@
 # CHANGELOG.md
 
+## 0.0.4 (unreleased)
+- Migrated from TailwindCSS 3.4 to 4.0
+- Migrated from VueUse 11.4.0 to 12.5.0
+- Separate navigation buttons to custom component
+- added color support for navigation and buttons (Only in hex color)
+  - Added two new props for color handle (main-color, accent-color)
+- added morph bars navigation buttons styles (both solid and outline)
+- changed navigation nametypes from rounded to outline and added solid prefix to normal styles
+- refactorized functions and code for SliderVue component
 
 
 ## 0.0.3 (unreleased)
